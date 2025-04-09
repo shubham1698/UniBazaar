@@ -1,18 +1,38 @@
 # Sprint 3: User Stories and Implementation Plan
 
 ## Overview
-During **Sprint 3**, our primary focus was on enhancing user management, strengthening account security, improving backend performance, implementing messaging system in backend and refining product-related functionalities. Below is an overview of the issues we tackled, the tasks completed, and the corresponding backend API documentation for user operations.
+During **Sprint 3**, our primary focus was on enhancing user management, strengthening account security, improving backend performance, and refining product-related functionalities. We also introduced JWT-based authentication for secure user login and session management. Below is an overview of the issues we tackled, the tasks completed, and the corresponding documentation for both Products and Users services.
 
 ---
 
 ## Sprint 3: Completed Issues
 
-| Issue                                                                                       | Status   | Type                 |
-| ------------------------------------------------------------------------------------------- | -------- | -------------------- |
-| Pagination support for GET endpoints in products services                                   | ✅ Closed | Backend, Sprint v3   |
-| Add a Search API to support full text search over products                                  | ✅ Closed | Backend, Sprint v3   |
-| Custom Error Handling in produtcs API to return appropriate status and messages efficiently | ✅ Closed | Backend, Sprint v3   |
-| Create products page and load paginated results into the UI                                 | ✅ Closed | Frontend, Sprint v3 |
+| Issue                                                                                       | Status   | Type                             |
+| ------------------------------------------------------------------------------------------- | -------- | -------------------------------- |
+| Pagination support for GET endpoints in products services                                   | ✅ Closed | Backend, Sprint v3               |
+| Add a Search API to support full text search over products                                  | ✅ Closed | Backend, Sprint v3               |
+| Custom Error Handling in products API to return appropriate status and messages efficiently | ✅ Closed | Backend, Sprint v3               |
+| Create products page and load paginated results into the UI                                 | ✅ Closed | Frontend, Sprint v3              |
+| Add Better Error Handling and Improve Login Workflow                                         | ✅ Closed | Backend, Sprint v3               |
+| Add Unit Tests for Routes                                                                    | ✅ Closed | Sprint v3                        |
+| Add Unit Tests for New Functionality in Users                                                | ✅ Closed | Sprint v3                        |
+| Migrated backend messaging system to AWS                                                     | ✅ Closed | Backend, Sprint v3               |
+| Add unit tests for backend messaging system                                                  | ✅ Closed | Backend, Sprint v3               |
+| Add unit tests for messaging system                                                          | ✅ Closed | Frontend, Sprint v3              |
+| Chat application scrolling issue                                                             | ✅ Closed | Frontend, Sprint v3              |
+| Create search API to query database with text                                                | ✅ Closed | Backend, Sprint v3               |
+| Refactor FE messaging to improve modularity                                                  | ✅ Closed | Frontend, Sprint v3              |
+| Implement frontend of messaging system                                                       | ✅ Closed | Frontend, Sprint v3              |
+| About Us Page                                                                                | ✅ Closed | Frontend, Sprint v3              |
+| Add Pagination support for Get Products and Get Products By ID                               | ✅ Closed | Backend, Enhancement, Sprint v3  |
+| CI/CD setup created using GitHub actions                                                     | ✅ Closed | Sprint v3                        |
+| CI/CD for frontend using GitHub actions                                                      | ✅ Closed | Frontend, Sprint v3              |
+| UI for OTP for Email Verification                                                            | ✅ Closed | Frontend, Sprint v3              |
+| Animations for Page Transitions and Modal                                                    | ✅ Closed | Frontend, Sprint v3              |
+| UI Implementation for Forgot Password Functionality                                          | ✅ Closed | Frontend, Sprint v3              |
+| Design UI to display all products                                                            | ✅ Closed | Frontend, Sprint v3              |
+| Implement JWT for security to manage user login state                                        | ✅ Closed | Backend, Sprint v3               |
+
 
 ---
 
@@ -63,12 +83,693 @@ During **Sprint 3**, our primary focus was on enhancing user management, strengt
      - Used `useRef` to track already fetched products and stop requests when all products are loaded.
      - Used conditional logic to stop making requests once all products have been fetched, providing a smooth browsing experience for users.
 
+### 5. **JWT-Based Authentication**
+- **Enhanced Security Measures:**  
+  - Implemented robust JWT-based authentication for the backend.  
+  - Introduced secure endpoints for:  
+    - **User Login:** Issues access and refresh tokens upon successful authentication.  
+    - **Token Validation:** Validates JWTs on protected routes to ensure session integrity.  
+    - **Logout:** Revokes tokens and safely ends user sessions.  
+  - Ensures each session is securely managed using tokens with unique identifiers, allowing precise control over session validity and user state.
+
+### 6. **Enhanced Detailed Error Handling for Users**
+- **Improved User-Focused Error Feedback:**  
+  - Refined backend error handling to return more informative and actionable messages during user operations such as registration, login, and profile management.  
+  - These enhancements simplify debugging and improve the overall user experience.
+
+### 7. **Improved Login and Signup Workflow:**  
+  - Refined the overall flow for user authentication to make the signup and login experience smoother and more intuitive.  
+  - Handled edge cases more effectively to reduce potential errors and enhance reliability across various user scenarios.
+
+
 ---
 # UniBazaar User API Documentation
 
 This section of the document describes the UniBazaar backend API for user management. It covers the **design choices**, **request/response formats**, **error handling**, and **sample JSON** requests for each endpoint. 
 
 ---
+
+# Users: Backend API Documentation
+
+## Table of Contents
+1. [Design & Implementation Highlights](#design--implementation-highlights)
+2. [Endpoints Overview](#endpoints-overview)
+3. [Detailed Endpoint Documentation](#detailed-endpoint-documentation)
+   - [Sign Up (POST /signup)](#1-sign-up-post-signup)
+   - [Verify Email (POST /verifyEmail)](#2-verify-email-post-verifyemail)
+   - [Forgot Password (POST /forgotpassword)](#3-forgot-password-post-forgotpassword)
+   - [Verify Reset Code (POST /verifyresetcode)](#4-verify-reset-code-post-verifyresetcode)
+   - [Update Password (POST /updatepassword)](#5-update-password-post-updatepassword)
+   - [Delete User (POST /deleteuser)](#6-delete-user-post-deleteuser)
+   - [Display User (POST /displayuser)](#7-display-user-post-displayuser)
+   - [Login (POST /login)](#8-login-post-login)
+   - [Update Name (POST /updatename)](#9-update-name-post-updatename)
+   - [Update Phone (POST /updatephone)](#10-update-phone-post-updatephone)
+   - [Error Cases & Responses](#error-cases--responses)
+4. [Appendix: Security & Design Choices](#security-design-choices)
+
+---
+
+## Design & Implementation Highlights
+
+### 1. Password Hashing (Argon2id)
+- We use **Argon2id** (via [alexedwards/argon2id](https://github.com/alexedwards/argon2id)) for secure password storage.
+- Parameters:
+  - **Memory**: 128 MB
+  - **Iterations**: 4
+  - **Parallelism**: Number of CPU cores
+  - **SaltLength**: 16 bytes
+  - **KeyLength**: 32 bytes
+- **Why Argon2id?**  
+  Argon2id is recommended by OWASP for modern password hashing. It is resistant to GPU-cracking attacks and provides configurable memory hardness.
+
+### 2. Password Complexity
+- Minimum **60 bits of entropy** enforced via [go-password-validator](https://github.com/wagslane/go-password-validator).
+- If a password is too weak, the server returns an error indicating insufficient complexity.
+
+### 3. Email Validation
+- Only **.edu** domains from specific Florida universities are allowed to register (`ufl.edu`, `fsu.edu`, `ucf.edu`, etc.).
+- If the domain is not recognized, the request is rejected.
+
+### 4. Phone Validation
+- Regex is used to ensure a valid US number with 10 digits, optionally prefixed by `+1` is being used.
+
+### 5. One-Time Password (OTP) Verification for Email upon Registration
+- Upon user registration, a 6-digit OTP is generated and sent to the user's registered email via SendGrid.
+- The user must enter the correct OTP to complete the email verification process.
+- If the OTP is incorrect or expired, verification will fail, and the user must request a new OTP.
+
+### 6. One-Time Password (OTP) Verification for Forgot Password
+- When a user initiates a password reset, a 6-digit OTP is generated and sent to their registered email.
+- The user must enter the correct OTP to proceed with resetting their password.
+- If the user enters an incorrect OTP three or more times, a security alert email is triggered, notifying them of suspicious activity.
+
+### 7. Database (GORM)
+- GORM is used to interact with the database.
+- **User** model:
+  ```go
+  type User struct {
+      UserID              int    `gorm:"column:userid;primaryKey" json:"userid"`
+      Name                string `json:"name"`
+      Email               string `json:"email"`
+      Password            string `json:"-"`
+      OTPCode             string `json:"-"`
+      FailedResetAttempts int    `json:"-"`
+      Verified            bool   `json:"-"`
+      Phone               string `json:"phone"`
+  }
+
+## Endpoints Overview
+
+Below is a quick reference to all of the endpoints, including the new additions:
+
+| Endpoint        | Method | Description                                                                 |
+|-----------------|--------|-----------------------------------------------------------------------------|
+| `/signup`       | POST   | Create a new user and send an OTP to verify email.                          |
+| `/verifyEmail`  | POST   | Verify user email with OTP.                                                 |
+| `/forgotPassword` | POST | Generate a password-reset OTP.                                              |
+| `/updatePassword` | POST | Verify OTP & update user’s password.                                        |
+| `/deleteUser`   | POST   | Remove user from the system.                                                |
+| `/displayUser`  | POST   | Fetch user details by email.                                                |
+| `/login`        | POST   | Log in with email/password & get JWT.                                       |
+| `/updateName`   | POST   | Update user’s name (requires valid credentials).                            |
+| `/updatePhone`  | POST   | Update user’s phone (requires valid credentials).                           |
+| `/getjwt`       | POST   | Generate a JWT for a given user payload (sample/test endpoint).             |
+| `/verifyjwt`    | GET    | Validate a provided JWT; checks if revoked or expired.                      |
+| `/logout`       | POST   | Revoke the current JWT token.                                               |
+
+---
+
+# Detailed Endpoint Documentation
+
+## 1. Sign Up (POST `/signup`)
+### Description
+Creates a new user, stores a hashed password, and emails an OTP code for verification.
+
+### Request Body (JSON)
+```json
+{
+  "name": "Jinx Silco",
+  "email": "getjinxed@ufl.edu",
+  "password": "MonkeyBomb#5567",
+  "phone": "+15551234567"
+}
+```
+
+### Behavior
+- Validates email domain (must be recognized .edu).
+- Validates password strength (≥ 60 bits).
+- Validates USA phone number format.
+- Hashes password using Argon2id.
+- Saves user to the database.
+- Generates a 6-digit OTP code, saves it, and sends it via email (through SendGrid's API).
+
+### Success Response (JSON)
+```json
+{
+  "message": "User created successfully. Please check your email for the OTP code."
+}
+```
+
+### Error Cases
+- **400 Bad Request**: Invalid email, weak password, or incorrect phone format.
+- **409 Conflict**: User already exists.
+- **500 Internal Server Error**: Database or email-sending issues.
+
+---
+
+## 2. Verify Email (POST `/verifyEmail`)
+### Description
+Verifies the user's email with the OTP code sent during sign-up.
+
+### Request Body (JSON)
+```json
+{
+  "email": "getjinxed@ufl.edu",
+  "code": "223466"
+}
+```
+
+### Behavior
+- Checks if OTP matches.
+- If valid, marks user as Verified.
+- If invalid, increments failure counter. After 3 failures, sends a security alert email.
+
+### Success Response (JSON)
+```json
+{
+  "message": "Email verified successfully!"
+}
+```
+
+### Error Cases
+- **400 Bad Request**: Invalid or expired OTP.
+- **404 Not Found**: User does not exist.
+- **500 Internal Server Error**: Database or email-sending issues.
+
+---
+
+## 3. Forgot Password (POST `/forgotPassword`)
+### Description
+Initiates a password reset by generating and emailing a reset OTP.
+
+### Request Body (JSON)
+```json
+{
+  "email": "getjinxed@ufl.edu"
+}
+```
+
+### Behavior
+- Ensures user exists.
+- Resets `FailedResetAttempts` to 0.
+- Generates a 6-digit OTP and emails it.
+- Stores OTP in the database.
+
+### Success Response (JSON)
+```json
+{
+  "message": "A reset code has been sent to your email."
+}
+```
+
+### Error Cases
+- **404 Not Found**: User does not exist.
+- **500 Internal Server Error**: Database or email issues.
+
+---
+
+## 4. Verify Reset Code (POST `/updatePassword`)
+### Description
+Verifies the OTP code sent for password reset, and if correct, sets the new password.
+
+### Request Body (JSON)
+```json
+{
+  "email": "getjinxed@ufl.edu",
+  "otp_code": "654321",
+  "new_password": "EkkoRew1nd!"
+}
+```
+
+### Behavior
+- Checks if OTP matches.
+- Validates new password strength.
+- Hashes new password and updates user record.
+- Resets `FailedResetAttempts` to 0 and clears OTP.
+- After 3 failed attempts, sends a security alert email.
+
+### Success Response (JSON)
+```json
+{
+  "message": "Password has been reset successfully."
+}
+```
+
+### Error Cases
+- **400 Bad Request**: Invalid OTP or weak password.
+- **404 Not Found**: User does not exist.
+- **500 Internal Server Error**: Database or hashing issues.
+
+---
+
+## 5. Delete User (POST `/deleteUser`)
+### Description
+Deletes a user from the database.
+
+### Request Body (JSON)
+```json
+{
+  "email": "getjinxed@ufl.edu"
+}
+```
+
+### Behavior
+- Finds and deletes user record.
+
+### Success Response (JSON)
+```json
+{
+  "message": "User has been deleted."
+}
+```
+
+### Error Cases
+- **404 Not Found**: User does not exist.
+- **500 Internal Server Error**: Database operation failure.
+
+---
+
+## 6. Display User (POST `/displayUser`)
+### Description
+Fetches user details by email.
+
+### Request Body (JSON)
+```json
+{
+  "email": "getjinxed@ufl.edu"
+}
+```
+
+### Success Response (JSON)
+```json
+{
+  "userid": 101,
+  "name": "Jinx Silco",
+  "email": "getjinxed@ufl.edu",
+  "phone": "+15551234567"
+}
+```
+
+### Error Cases
+- **404 Not Found**: User does not exist.
+- **500 Internal Server Error**: Database issues.
+
+---
+## 7. Login (POST `/login`)
+### Description
+Authenticates the user using email and password. Returns a JWT valid for 48 hours and the user's ID if credentials are valid and the account is verified.
+
+### Request Body (JSON)
+```json
+{
+  "email": "getjinxed@ufl.edu",
+  "password": "EkkoRew1nd!"
+}
+```
+
+### Success Response (JSON)
+```json
+{
+  "userId": 101,
+  "token": "<JWT_TOKEN_STRING>"
+}
+```
+
+### Error Cases
+- **401 Unauthorized**: Invalid credentials or unverified account.
+- **500 Internal Server Error**: Error during hashing or validation.
+
+---
+
+## 8. Get JWT (POST `/getjwt`)
+### Description
+Generates a JWT for a given user payload. Intended for sample/test purposes—does not authenticate from the database.
+
+### Request Body (JSON)
+```json
+{
+  "email": "getjinxed@ufl.edu",
+  "password": "EkkoRew1nd!"
+}
+{
+  "name": "Jinx Silco",
+  "email": "getjinxed@ufl.edu",
+  "phone": "+15551234567"
+}
+```
+
+### Success Response
+- **200 OK**: JWT returned in `Authorization` header.
+
+### Error Cases
+- **500 Internal Server Error**: Token generation failure.
+
+---
+
+## 9. Verify JWT (GET `/verifyjwt`)
+### Description
+Validates a provided JWT to ensure it is not expired or revoked.
+
+### Header
+```
+Authorization: Bearer <token>
+```
+
+### Success Response
+- **200 OK**: Token is valid. Returns partial user info.
+
+### Error Cases
+- **400/401**: Missing or invalid token, or token is expired or revoked.
+
+---
+
+## 10. Logout (POST `/logout`)
+### Description
+Revokes the current JWT by storing its JWT ID (`jti`) in an in-memory map to prevent further usage.
+
+### Header
+```
+Authorization: Bearer <token>
+```
+
+### Success Response (JSON)
+```json
+{
+  "message": "Logout successful, token revoked."
+}
+```
+
+### Error Cases
+- **400 Bad Request**: Malformed Authorization header.
+- **401 Unauthorized**: Invalid or missing token.
+
+---
+
+## 11. Update Name (POST `/updateName`)
+### Description
+Updates the user's name after verifying the user's identity through email and password.
+
+### Request Body (JSON)
+```json
+{
+  "email": "getjinxed@ufl.edu",
+  "password": "EkkoRew1nd!",
+  "newName": "Jinx Silco Updated"
+}
+```
+
+### Behavior
+- Authenticates user by verifying email and password.
+- Updates user's name in the database.
+
+### Success Response (JSON)
+```json
+{
+  "message": "Name updated successfully."
+}
+```
+
+### Error Cases
+- **400 Bad Request**: Invalid JSON input or database update failure.
+- **401 Unauthorized**: User not found or invalid credentials.
+- **500 Internal Server Error**: Password hashing/verification issues.
+
+---
+
+## 12. Update Phone (POST `/updatePhone`)
+### Description
+Updates the user's phone number after verifying the user's identity through email and password.
+
+### Request Body (JSON)
+```json
+{
+  "email": "getjinxed@ufl.edu",
+  "password": "EkkoRew1nd!",
+  "newPhone": "+15559876543"
+}
+```
+
+### Behavior
+- Authenticates user by verifying email and password.
+- Updates user's phone number in the database.
+
+### Success Response (JSON)
+```json
+{
+  "message": "Phone updated successfully."
+}
+```
+
+### Error Cases
+- **400 Bad Request**: Invalid JSON input or database update failure.
+- **401 Unauthorized**: User not found or invalid credentials.
+- **500 Internal Server Error**: Password hashing/verification issues.
+
+
+
+### Common Error Codes
+| Status Code | Meaning |
+|-------------|---------|
+| 400 Bad Request | Malformed/missing input data |
+| 401 Unauthorized | Invalid credentials or token |
+| 404 Not Found | User record not found |
+| 500 Internal Server Error | DB/hash/OTP/email issues |
+
+
+# Appendix: Security & Design Choices
+
+This section explains key security and design decisions behind the UniBazaar user authentication system.
+
+## 1. Why Use SendGrid for Email Notifications?
+SendGrid was chosen as the email provider for sending OTP codes and security alerts because:
+- **Reliability:** SendGrid offers a scalable and highly available cloud-based email service.
+- **Security:** It supports **DKIM, SPF, and TLS encryption**, ensuring secure email transmission.
+- **Rate Limits & Throttling:** SendGrid provides rate limiting to prevent abuse (e.g., brute-force OTP requests).
+- **Easy API Integration:** The SendGrid API is well-documented and integrates smoothly with Go-based backend services.
+- **Monitoring & Analytics:** Logs and analytics help track email delivery rates and failures.
+
+### Alternative Considerations
+Other email services such as **AWS SES** and **Mailgun** were considered, but SendGrid was selected due to its **free tier for transactional emails** and superior developer tooling.
+
+---
+
+## 2. Why Use Argon2id for Password Hashing?
+**Argon2id** is the recommended password hashing algorithm by OWASP and is used in UniBazaar due to:
+
+- **Memory-Hardness:** Argon2id is resistant to GPU and ASIC-based brute force attacks due to its high memory requirements.
+- **Customizable Parameters:** It allows tuning of memory, iterations, and parallelism for optimal security.
+- **Resistance to Timing Attacks:** Unlike bcrypt, Argon2id provides protection against cache-timing attacks.
+
+---
+
+## 3. Password Entropy Enforcement (go-password-validator)
+
+To enforce strong password security, UniBazaar uses `go-password-validator` with a **minimum entropy requirement of 60 bits**. This ensures that passwords are not easily guessable by:
+
+- **Forcing Complexity:** Users must have a unique, hard to guess password.
+- **Mitigating Dictionary Attacks:** Prevents users from choosing common or easily cracked passwords.
+- **Providing Real-Time Feedback:** If a password is weak, the API returns a message guiding the user to create a stronger one.
+
+### Example of Password Entropy Validation
+```go
+const minEntropyBits = 60
+err := passwordvalidator.Validate(password, minEntropyBits)
+if err != nil {
+    return fmt.Errorf("password is too weak: %v", err)
+}
+```
+
+By enforcing **entropy-based validation**, UniBazaar prevents users from choosing weak passwords while maintaining usability.
+
+---
+
+## 4. OTP Generation & Security Measures
+To enhance authentication security, UniBazaar uses a **random 6-digit OTP** for email verification and password reset.
+
+- **Generated Using Cryptographic Randomness:** The OTP is created using Go's `crypto/rand` package to ensure unpredictability.
+- **Short Expiry Time:** OTP codes expire within a limited time window (e.g., 5 minutes) to reduce brute-force attempts.
+- **Failure Tracking & Lockout Mechanism:** If a user enters an incorrect OTP multiple times (3 or more failures), the system sends a **security alert email**.
+
+
+This ensures **OTP codes are unique, secure, and difficult to guess**, enhancing authentication security.
+
+---
+## 5. JWT-Based Authentication
+Sprint 3 introduced JWT endpoints to improve session management and stateless authentication:
+
+- **JWT Generation:** The GetJWTHandler endpoint creates a signed token embedding user data. Tokens are generated using a secret stored in an environment variable.
+
+- **JWT Verification:** The VerifyJWTHandler validates tokens and extracts user information. It checks that the token hasn’t been revoked via a global in-memory revocation map.
+
+- **Token Revocation (Logout):** The LogoutHandler revokes the current token by marking its unique identifier (jti) as invalid, ensuring that a logged-out token cannot be reused.
+
+- **Security Considerations:** JWT tokens are signed with HS256, and their expiry and issuance times (iat/exp) are enforced to prevent replay and timing attacks.
+---
+
+## Conclusion
+These security measures were carefully chosen to **protect user data, prevent unauthorized access, and ensure system integrity**. 
+- **Argon2id** provides robust password protection against brute force attacks.
+- **SendGrid** ensures reliable OTP delivery with built-in monitoring and security features.
+- **Password entropy validation** enforces strong credentials to mitigate password-based attacks.
+- **OTP generation and validation** mechanisms enhance security while ensuring user convenience.
+- **Error Handling** robust error handling and login/signup flow.
+- **JWT functionality** enhances session management by enabling secure token generation, validation, and revocation. This stateless approach reduces server load while maintaining strong security practices.
+
+
+By implementing these industry-standard best practices, UniBazaar ensures a **secure, scalable, and resilient** authentication system.
+
+## Users: Unit Tests
+The users unit tests are located in `unit_test.go` and cover the following functionalities:
+
+### 1. User Insertion
+- **Test:** `TestUserInsert`
+- **Description:** Verifies that a user can be inserted into the database.
+- **Expected Behavior:** The insertion function returns no error.
+
+### 2. User Retrieval
+- **Test:** `TestUserRead`
+- **Description:** Tests reading a user from the database.
+- **Expected Behavior:** The correct user object is returned without errors.
+
+### 3. Update User Name
+- **Test:** `TestUpdateUserName`
+- **Description:** Ensures that a user’s name can be updated successfully.
+- **Expected Behavior:** The update function completes without errors.
+
+### 4. Update User Phone
+- **Test:** `TestUpdateUserPhone`
+- **Description:** Validates the ability to update a user’s phone number.
+- **Expected Behavior:** The function executes successfully without errors.
+
+### 5. Delete User
+- **Test:** `TestDeleteUser`
+- **Description:** Tests the deletion of a user from the database.
+- **Expected Behavior:** The delete function completes without errors.
+
+### 6. Initiate Password Reset
+- **Test:** `TestPasswordReset`
+- **Description:** Ensures that a password reset request can be initiated.
+- **Expected Behavior:** The function returns no errors.
+
+### 7. Verify Reset Code and Set New Password
+- **Test:** `TestVerifyResetCodeAndSetNewPassword`
+- **Description:** Verifies that a reset code can be validated and a new password can be set.
+- **Expected Behavior:** The function returns no errors.
+
+### 8. Validate `.edu` Email Addresses
+- **Test:** `TestValidateEduEmail`
+- **Description:** Checks whether only `.edu` email addresses are accepted.
+- **Expected Behavior:** Valid `.edu` emails pass, while non-`.edu` emails return errors.
+
+### 9. Validate Password Strength
+- **Test:** `TestValidatePassword`
+- **Description:** Ensures that passwords meet security requirements.
+- **Expected Behavior:** Weak passwords return errors, strong passwords pass validation.
+
+### 10. Validate Phone Numbers
+- **Test:** `TestValidatePhone`
+- **Description:** Checks the format of phone numbers.
+- **Expected Behavior:** Valid numbers pass, invalid numbers return errors.
+
+## Unit Tests in utils_test.go
+The tests in `utils_test.go` focus on JWT functionality and the associated helper functions:
+
+### 1. TestGenerateJWT
+- **Description:** Validates that a JWT can be generated from a user struct without error.
+- **Expected Behavior:** A non-empty token string is returned.
+
+### 2. TestParseJWTValidToken
+- **Description:** Ensures that a generated JWT is parsed successfully and contains the correct user claims.
+- **Expected Behavior:** The token is valid, and user claims (UserID, Name, Email) match the input.
+
+### 3. TestParseJWTInvalidToken
+- **Description:** Verifies that an invalid token (malformed string) is rejected.
+- **Expected Behavior:** Parsing returns an error and a nil token.
+
+### 4. TestExpiredToken
+- **Description:** Checks that tokens with past expiration dates are rejected.
+- **Expected Behavior:** The token is not parsed, and an appropriate error is returned.
+
+## Unit Tests in handler_test.go
+These tests simulate HTTP requests to verify that the REST API endpoints behave as expected:
+
+### 1. SignUpHandler Test
+- **Description:** Simulates a sign-up request with valid user details, then checks that the user is created and an OTP is sent.
+- **Expected Behavior:** HTTP 200 is returned and the new user is persisted with `Verified` set to false.
+
+### 2. VerifyEmailHandler Test
+- **Description:** Tests email verification by submitting the correct OTP.
+- **Expected Behavior:** The user’s verification status is updated to true.
+
+### 3. ForgotPasswordHandler Test
+- **Description:** Validates that a password reset request generates a new OTP for an existing user.
+- **Expected Behavior:** HTTP 200 is returned and the user record is updated with a new OTP.
+
+### 4. UpdatePasswordHandler Test
+- **Description:** Ensures that a valid OTP and new password result in a successful password update.
+- **Expected Behavior:** The user's password is updated (and re-hashed), and the OTP is cleared.
+
+### 5. DisplayUserHandler Test
+- **Description:** Confirms that the user details can be retrieved via the display endpoint.
+- **Expected Behavior:** The correct user data is returned in JSON format.
+
+### 6. UpdateNameHandler Test
+- **Description:** Checks that the user’s name can be updated after password verification.
+- **Expected Behavior:** The user’s name is updated successfully.
+
+### 7. UpdatePhoneHandler Test
+- **Description:** Verifies that the phone number update works after validating the user’s password.
+- **Expected Behavior:** The phone number is updated without errors.
+
+### 8. DeleteUserHandler Test
+- **Description:** Tests that the user deletion endpoint removes the user record from the database.
+- **Expected Behavior:** The user is deleted and no longer retrievable.
+
+### 9. JWT Endpoints
+#### a. GetJWTHandler
+- **Description:** Generates a JWT for a user based on provided name, email, and phone.
+- **Expected Behavior:** A valid JWT is returned in the response header.
+
+#### b. VerifyJWTHandler
+- **Description:** Verifies that a provided JWT is valid, not expired, and not revoked.
+- **Expected Behavior:** The endpoint confirms the token’s validity and returns user data.
+
+#### c. LogoutHandler
+- **Description:** Revokes the active JWT token by adding its unique identifier to an in-memory revocation list.
+- **Expected Behavior:** The token is marked as revoked and subsequent requests using the same token are denied.
+
+## Running Tests
+To execute the unit tests, use the following command:
+```sh
+ go test -v ./...
+```
+This will run all test cases and display detailed output.
+
+## Dependencies
+The tests utilize the following dependencies:
+- `github.com/stretchr/testify/assert` for assertions
+- `github.com/stretchr/testify/mock` for mocking user model methods
+
+Ensure these dependencies are installed before running tests:
+```sh
+go mod tidy
+go get github.com/stretchr/testify
+```
+
+## Conclusion
+These unit tests help ensure the reliability of the backend user management functionalities by validating the core operations such as user creation, update, deletion, authentication, and validation processes.
+
 ---
 
 # Products: Backend API Documentation
@@ -450,6 +1151,7 @@ With this API, UniBazaar can effectively manage its product offerings while ensu
     - Last product ID: `""` (empty), Limit: `3`.
     - Expected products:
         - `ProductID: "prod123"`, `UserID: 1`.
+
         - `ProductID: "prod456"`, `UserID: 2`.
         - `ProductID: "prod789"`, `UserID: 3`.
 
@@ -970,450 +1672,6 @@ go get github.com/stretchr/testify
 These unit tests help ensure the reliability of the backend product management functionalities by validating core operations such as product creation, update, deletion, retrieval, and validation processes.
 
 ---
-# Users: Backend API Documentation
-
-## Table of Contents
-1. [Design & Implementation Highlights](#design--implementation-highlights)
-2. [Endpoints Overview](#endpoints-overview)
-3. [Detailed Endpoint Documentation](#detailed-endpoint-documentation)
-   - [Sign Up (POST /signup)](#1-sign-up-post-signup)
-   - [Verify Email (POST /verifyEmail)](#2-verify-email-post-verifyemail)
-   - [Forgot Password (POST /forgotpassword)](#3-forgot-password-post-forgotpassword)
-   - [Verify Reset Code (POST /verifyresetcode)](#4-verify-reset-code-post-verifyresetcode)
-   - [Update Password (POST /updatepassword)](#5-update-password-post-updatepassword)
-   - [Delete User (POST /deleteuser)](#6-delete-user-post-deleteuser)
-   - [Display User (POST /displayuser)](#7-display-user-post-displayuser)
-   - [Login (POST /login)](#8-login-post-login)
-   - [Update Name (POST /updatename)](#9-update-name-post-updatename)
-   - [Update Phone (POST /updatephone)](#10-update-phone-post-updatephone)
-   - [Error Cases & Responses](#error-cases--responses)
-4. [Appendix: Security & Design Choices](#security-design-choices)
-
----
-
-## Design & Implementation Highlights
-
-### 1. Password Hashing (Argon2id)
-- We use **Argon2id** (via [alexedwards/argon2id](https://github.com/alexedwards/argon2id)) for secure password storage.
-- Parameters:
-  - **Memory**: 128 MB
-  - **Iterations**: 4
-  - **Parallelism**: Number of CPU cores
-  - **SaltLength**: 16 bytes
-  - **KeyLength**: 32 bytes
-- **Why Argon2id?**  
-  Argon2id is recommended by OWASP for modern password hashing. It is resistant to GPU-cracking attacks and provides configurable memory hardness.
-
-### 2. Password Complexity
-- Minimum **60 bits of entropy** enforced via [go-password-validator](https://github.com/wagslane/go-password-validator).
-- If a password is too weak, the server returns an error indicating insufficient complexity.
-
-### 3. Email Validation
-- Only **.edu** domains from specific Florida universities are allowed to register (`ufl.edu`, `fsu.edu`, `ucf.edu`, etc.).
-- If the domain is not recognized, the request is rejected.
-
-### 4. Phone Validation
-- Regex is used to ensure a valid US number with 10 digits, optionally prefixed by `+1` is being used.
-
-### 5. One-Time Password (OTP) Verification for Email upon Registration
-- Upon user registration, a 6-digit OTP is generated and sent to the user's registered email via SendGrid.
-- The user must enter the correct OTP to complete the email verification process.
-- If the OTP is incorrect or expired, verification will fail, and the user must request a new OTP.
-
-### 6. One-Time Password (OTP) Verification for Forgot Password
-- When a user initiates a password reset, a 6-digit OTP is generated and sent to their registered email.
-- The user must enter the correct OTP to proceed with resetting their password.
-- If the user enters an incorrect OTP three or more times, a security alert email is triggered, notifying them of suspicious activity.
-
-### 7. Database (GORM)
-- GORM is used to interact with the database.
-- **User** model:
-  ```go
-  type User struct {
-      UserID              int    `gorm:"column:userid;primaryKey" json:"userid"`
-      Name                string `json:"name"`
-      Email               string `json:"email"`
-      Password            string `json:"-"`
-      OTPCode             string `json:"-"`
-      FailedResetAttempts int    `json:"-"`
-      Verified            bool   `json:"-"`
-      Phone               string `json:"phone"`
-  }
-
-## Endpoints Overview
-
-Below is a quick reference to each endpoint:
-
-| **Endpoint**      | **Method** | **Description**                                 |
-| ----------------- | ---------- | ----------------------------------------------- |
-| `/signup`         | POST       | Create a new user, send verification OTP email. |
-| `/verifyEmail`    | POST       | Verify user email with OTP code.                |
-| `/forgotPassword` | POST       | Initiate a password reset (send reset OTP).     |
-| `/updatePassword` | POST       | Update user password (OTP-based).               |
-| `/deleteUser`     | POST       | Remove user from the system.                    |
-| `/displayUser`    | POST       | Retrieve user information.                      |
-| `/login`          | POST       | Authenticate user with email & password.        |
-| `/updateName`     | POST       | Update user's display name.                     |
-| `/updatePhone`    | POST       | Update user's phone number.                     |
-
----
-
-# Detailed Endpoint Documentation
-
-## 1. Sign Up (POST `/signup`)
-### Description
-Creates a new user, stores a hashed password, and emails an OTP code for verification.
-
-### Request Body (JSON)
-```json
-{
-  "name": "Jinx Silco",
-  "email": "getjinxed@ufl.edu",
-  "password": "MonkeyBomb#5567",
-  "phone": "+15551234567"
-}
-```
-
-### Behavior
-- Validates email domain (must be recognized .edu).
-- Validates password strength (≥ 60 bits).
-- Validates USA phone number format.
-- Hashes password using Argon2id.
-- Saves user to the database.
-- Generates a 6-digit OTP code, saves it, and sends it via email (through SendGrid's API).
-
-### Success Response (JSON)
-```json
-{
-  "message": "User created successfully. Please check your email for the OTP code."
-}
-```
-
-### Error Cases
-- **400 Bad Request**: Invalid email, weak password, or incorrect phone format.
-- **409 Conflict**: User already exists.
-- **500 Internal Server Error**: Database or email-sending issues.
-
----
-
-## 2. Verify Email (POST `/verifyEmail`)
-### Description
-Verifies the user's email with the OTP code sent during sign-up.
-
-### Request Body (JSON)
-```json
-{
-  "email": "getjinxed@ufl.edu",
-  "code": "223466"
-}
-```
-
-### Behavior
-- Checks if OTP matches.
-- If valid, marks user as Verified.
-- If invalid, increments failure counter. After 3 failures, sends a security alert email.
-
-### Success Response (JSON)
-```json
-{
-  "message": "Email verified successfully!"
-}
-```
-
-### Error Cases
-- **400 Bad Request**: Invalid or expired OTP.
-- **404 Not Found**: User does not exist.
-- **500 Internal Server Error**: Database or email-sending issues.
-
----
-
-## 3. Forgot Password (POST `/forgotPassword`)
-### Description
-Initiates a password reset by generating and emailing a reset OTP.
-
-### Request Body (JSON)
-```json
-{
-  "email": "getjinxed@ufl.edu"
-}
-```
-
-### Behavior
-- Ensures user exists.
-- Resets `FailedResetAttempts` to 0.
-- Generates a 6-digit OTP and emails it.
-- Stores OTP in the database.
-
-### Success Response (JSON)
-```json
-{
-  "message": "A reset code has been sent to your email."
-}
-```
-
-### Error Cases
-- **404 Not Found**: User does not exist.
-- **500 Internal Server Error**: Database or email issues.
-
----
-
-## 4. Verify Reset Code (POST `/updatePassword`)
-### Description
-Verifies the OTP code sent for password reset, and if correct, sets the new password.
-
-### Request Body (JSON)
-```json
-{
-  "email": "getjinxed@ufl.edu",
-  "otp_code": "654321",
-  "new_password": "EkkoRew1nd!"
-}
-```
-
-### Behavior
-- Checks if OTP matches.
-- Validates new password strength.
-- Hashes new password and updates user record.
-- Resets `FailedResetAttempts` to 0 and clears OTP.
-- After 3 failed attempts, sends a security alert email.
-
-### Success Response (JSON)
-```json
-{
-  "message": "Password has been reset successfully."
-}
-```
-
-### Error Cases
-- **400 Bad Request**: Invalid OTP or weak password.
-- **404 Not Found**: User does not exist.
-- **500 Internal Server Error**: Database or hashing issues.
-
----
-
-## 6. Delete User (POST `/deleteUser`)
-### Description
-Deletes a user from the database.
-
-### Request Body (JSON)
-```json
-{
-  "email": "getjinxed@ufl.edu"
-}
-```
-
-### Behavior
-- Finds and deletes user record.
-
-### Success Response (JSON)
-```json
-{
-  "message": "User has been deleted."
-}
-```
-
-### Error Cases
-- **404 Not Found**: User does not exist.
-- **500 Internal Server Error**: Database operation failure.
-
----
-
-## 7. Display User (POST `/displayUser`)
-### Description
-Fetches user details by email.
-
-### Request Body (JSON)
-```json
-{
-  "email": "getjinxed@ufl.edu"
-}
-```
-
-### Success Response (JSON)
-```json
-{
-  "userid": 101,
-  "name": "Jinx Silco",
-  "email": "getjinxed@ufl.edu",
-  "phone": "+15551234567"
-}
-```
-
-### Error Cases
-- **404 Not Found**: User does not exist.
-- **500 Internal Server Error**: Database issues.
-
----
-
-## 8. Login (POST `/login`)
-### Description
-Authenticates the user with email and password.
-
-### Request Body (JSON)
-```json
-{
-  "email": "getjinxed@ufl.edu",
-  "password": "EkkoRew1nd!"
-}
-```
-
-### Success Response (JSON)
-```json
-{
-  "message": "Login successful."
-}
-```
-
-### Error Cases
-- **401 Unauthorized**: Incorrect password.
-- **404 Not Found**: User does not exist.
-- **500 Internal Server Error**: Database or hashing issues.
-
-# Appendix: Security & Design Choices
-
-This section explains key security and design decisions behind the UniBazaar user authentication system.
-
-## 1. Why Use SendGrid for Email Notifications?
-SendGrid was chosen as the email provider for sending OTP codes and security alerts because:
-- **Reliability:** SendGrid offers a scalable and highly available cloud-based email service.
-- **Security:** It supports **DKIM, SPF, and TLS encryption**, ensuring secure email transmission.
-- **Rate Limits & Throttling:** SendGrid provides rate limiting to prevent abuse (e.g., brute-force OTP requests).
-- **Easy API Integration:** The SendGrid API is well-documented and integrates smoothly with Go-based backend services.
-- **Monitoring & Analytics:** Logs and analytics help track email delivery rates and failures.
-
-### Alternative Considerations
-Other email services such as **AWS SES** and **Mailgun** were considered, but SendGrid was selected due to its **free tier for transactional emails** and superior developer tooling.
-
----
-
-## 2. Why Use Argon2id for Password Hashing?
-**Argon2id** is the recommended password hashing algorithm by OWASP and is used in UniBazaar due to:
-
-- **Memory-Hardness:** Argon2id is resistant to GPU and ASIC-based brute force attacks due to its high memory requirements.
-- **Customizable Parameters:** It allows tuning of memory, iterations, and parallelism for optimal security.
-- **Resistance to Timing Attacks:** Unlike bcrypt, Argon2id provides protection against cache-timing attacks.
-
----
-
-## 3. Password Entropy Enforcement (go-password-validator)
-
-To enforce strong password security, UniBazaar uses `go-password-validator` with a **minimum entropy requirement of 60 bits**. This ensures that passwords are not easily guessable by:
-
-- **Forcing Complexity:** Users must have a unique, hard to guess password.
-- **Mitigating Dictionary Attacks:** Prevents users from choosing common or easily cracked passwords.
-- **Providing Real-Time Feedback:** If a password is weak, the API returns a message guiding the user to create a stronger one.
-
-### Example of Password Entropy Validation
-```go
-const minEntropyBits = 60
-err := passwordvalidator.Validate(password, minEntropyBits)
-if err != nil {
-    return fmt.Errorf("password is too weak: %v", err)
-}
-```
-
-By enforcing **entropy-based validation**, UniBazaar prevents users from choosing weak passwords while maintaining usability.
-
----
-
-## 4. OTP Generation & Security Measures
-To enhance authentication security, UniBazaar uses a **random 6-digit OTP** for email verification and password reset.
-
-- **Generated Using Cryptographic Randomness:** The OTP is created using Go's `crypto/rand` package to ensure unpredictability.
-- **Short Expiry Time:** OTP codes expire within a limited time window (e.g., 5 minutes) to reduce brute-force attempts.
-- **Failure Tracking & Lockout Mechanism:** If a user enters an incorrect OTP multiple times (3 or more failures), the system sends a **security alert email**.
-
-
-This ensures **OTP codes are unique, secure, and difficult to guess**, enhancing authentication security.
-
----
-
-## Conclusion
-These security measures were carefully chosen to **protect user data, prevent unauthorized access, and ensure system integrity**. 
-- **Argon2id** provides robust password protection against brute force attacks.
-- **SendGrid** ensures reliable OTP delivery with built-in monitoring and security features.
-- **Password entropy validation** enforces strong credentials to mitigate password-based attacks.
-- **OTP generation and validation** mechanisms enhance security while ensuring user convenience.
-
-By implementing these industry-standard best practices, UniBazaar ensures a **secure, scalable, and resilient** authentication system.
-
-## Users: Unit Tests
-The unit tests are located in `unit_test.go` and cover the following functionalities:
-
-### 1. User Insertion
-- **Test:** `TestUserInsert`
-- **Description:** Verifies that a user can be inserted into the database.
-- **Expected Behavior:** The insertion function returns no error.
-
-### 2. User Retrieval
-- **Test:** `TestUserRead`
-- **Description:** Tests reading a user from the database.
-- **Expected Behavior:** The correct user object is returned without errors.
-
-### 3. Update User Name
-- **Test:** `TestUpdateUserName`
-- **Description:** Ensures that a user’s name can be updated successfully.
-- **Expected Behavior:** The update function completes without errors.
-
-### 4. Update User Phone
-- **Test:** `TestUpdateUserPhone`
-- **Description:** Validates the ability to update a user’s phone number.
-- **Expected Behavior:** The function executes successfully without errors.
-
-### 5. Delete User
-- **Test:** `TestDeleteUser`
-- **Description:** Tests the deletion of a user from the database.
-- **Expected Behavior:** The delete function completes without errors.
-
-### 6. Initiate Password Reset
-- **Test:** `TestPasswordReset`
-- **Description:** Ensures that a password reset request can be initiated.
-- **Expected Behavior:** The function returns no errors.
-
-### 7. Verify Reset Code and Set New Password
-- **Test:** `TestVerifyResetCodeAndSetNewPassword`
-- **Description:** Verifies that a reset code can be validated and a new password can be set.
-- **Expected Behavior:** The function returns no errors.
-
-### 8. Validate `.edu` Email Addresses
-- **Test:** `TestValidateEduEmail`
-- **Description:** Checks whether only `.edu` email addresses are accepted.
-- **Expected Behavior:** Valid `.edu` emails pass, while non-`.edu` emails return errors.
-
-### 9. Validate Password Strength
-- **Test:** `TestValidatePassword`
-- **Description:** Ensures that passwords meet security requirements.
-- **Expected Behavior:** Weak passwords return errors, strong passwords pass validation.
-
-### 10. Validate Phone Numbers
-- **Test:** `TestValidatePhone`
-- **Description:** Checks the format of phone numbers.
-- **Expected Behavior:** Valid numbers pass, invalid numbers return errors.
-
-## Running Tests
-To execute the unit tests, use the following command:
-```sh
- go test -v ./...
-```
-This will run all test cases and display detailed output.
-
-## Dependencies
-The tests utilize the following dependencies:
-- `github.com/stretchr/testify/assert` for assertions
-- `github.com/stretchr/testify/mock` for mocking user model methods
-
-Ensure these dependencies are installed before running tests:
-```sh
-go mod tidy
-go get github.com/stretchr/testify
-```
-
-## Conclusion
-These unit tests help ensure the reliability of the backend user management functionalities by validating the core operations such as user creation, update, deletion, authentication, and validation processes.
-
-
----
-
 
 # Messaging System API Documentation
 
@@ -1426,24 +1684,25 @@ These unit tests help ensure the reliability of the backend user management func
 6. [User Handling](#4-user-handling)
 7. [Data Models](#5-data-models)
 8. [Repository Functions](#6-repository-functions)
-9. [Conclusion](#conclusion)
+9. [AWS Migration](#8-aws-migration)
+10. [Conclusion](#conclusion)
 
 ---
 
 ## Overview
-The Messaging System API provides functionality for real-time messaging between users. It supports WebSocket connections for live message transmission, REST endpoints for fetching messages, and user management operations. The system also includes chat history persistence, ensuring messages remain accessible even if a user gets disconnected.
+The Messaging System API provides functionality for real-time messaging between users. It supports WebSocket connections for live message transmission, REST endpoints for fetching messages, and user management operations. The system ensures chat history persistence, allowing users to retrieve messages even after disconnections. With updates in Sprint 3, offline message retrieval and user connection management have been enhanced for a more robust real-time experience.
 
 ---
 
 ## Endpoints Overview
 Below is a summary of the available endpoints in this API:
 
-| **Method** | **Endpoint**                                                | **Description**                                 | **Usage**                                 |
-| ---------- | ----------------------------------------------------------- | ----------------------------------------------- | ----------------------------------------- |
-| `GET`      | `/ws?user_id={user_id}`                                     | WebSocket connection for real-time messaging.   | Establishes WebSocket connection.         |
-| `POST`     | `/send`                                                     | Sends a message from one user to another.       | Accepts a JSON payload to send a message. |
-| `GET`      | `/messages?sender_id={sender_id}&receiver_id={receiver_id}` | Retrieves messages exchanged between two users. | Fetches messages by sender and receiver.  |
-| `GET`      | `/users`                                                    | Retrieves all registered users in the system.   | Fetches a list of all users.              |
+| **Method** | **Endpoint**                                                | **Description**                                           | **Usage**                                 |
+| ---------- | ----------------------------------------------------------- | --------------------------------------------------------- | ----------------------------------------- |
+| `GET`      | `/ws?user_id={user_id}`                                     | WebSocket connection for real-time messaging.             | Establishes WebSocket connection.         |
+| `POST`     | `/messages`                                                 | Sends a message from one user to another.                 | Accepts a JSON payload to send a message. |
+| `GET`      | `/api/conversation/{user1ID}/{user2ID}`                     | Retrieves messages exchanged between two users.           | Fetches the conversation between two users.|
+| `GET`      | `/users`                                                    | Retrieves all registered users in the system.             | Fetches a list of all users.              |
 
 ---
 
@@ -1468,6 +1727,7 @@ Below is a summary of the available endpoints in this API:
 - When a client connects, the system assigns a persistent session.
 - If a user gets disconnected, the system retains their chat history for seamless recovery upon reconnection.
 - Heartbeat signals ensure the connection remains active, and reconnections are handled automatically.
+- WebSocket message handling logic has been enhanced to account for new user connections and broadcast messages.
 
 ---
 
@@ -1475,14 +1735,14 @@ Below is a summary of the available endpoints in this API:
 
 ### `HandleSendMessage(w http.ResponseWriter, r *http.Request)`
 **Method:** `POST`  
-**Endpoint:** `/send`  
+**Endpoint:** `/messages`  
 **Description:** Accepts a JSON payload to send a message.  
 **Request Body:**
 ```json
 {
   "sender_id": 1,
   "receiver_id": 2,
-  "content": "Hello!"
+  "content": "Hello! How are you?"
 }
 ```
 **Response:**
@@ -1492,13 +1752,13 @@ Below is a summary of the available endpoints in this API:
 }
 ```
 
-### `HandleGetMessages(w http.ResponseWriter, r *http.Request)`
+### `HandleGetConversation(w http.ResponseWriter, r *http.Request)`
 **Method:** `GET`  
-**Endpoint:** `/messages?sender_id={sender_id}&receiver_id={receiver_id}`  
+**Endpoint:** `/api/conversation/{user1ID}/{user2ID}`  
 **Description:** Retrieves messages exchanged between two users.  
-**Query Parameters:**
-- `sender_id` (integer) - Sender user ID.
-- `receiver_id` (integer) - Receiver user ID.
+**Path Parameters:**
+- `user1ID` (integer) - The ID of the first user.
+- `user2ID` (integer) - The ID of the second user.
 
 **Response:** List of messages:
 ```json
@@ -1543,7 +1803,7 @@ Below is a summary of the available endpoints in this API:
   "id": 1,
   "sender_id": 1,
   "receiver_id": 2,
-  "content": "Hello!",
+  "content": "Hello! How are you?",
   "timestamp": 1700000000,
   "read": false
 }
@@ -1574,13 +1834,67 @@ Below is a summary of the available endpoints in this API:
 ### `GetUnreadMessages(userID uint) ([]models.Message, error)`
 - Fetches all unread messages for a user.
 
-### `GetConversation(userID uint) ([]models.Message, error)`
-- Retrieves all messages where the user is either the sender or receiver.
+### `GetConversation(user1ID uint, user2ID uint) ([]models.Message, error)`
+- Retrieves all messages where either user is the sender or receiver in the conversation.
 
 ---
 
-## Conclusion
-This API facilitates real-time and stored messaging functionalities through WebSockets and REST endpoints, enabling seamless communication between users. The system ensures chat history persistence, so conversations remain intact even if users experience connectivity issues. 
+## 7. Offline Message Handling
+
+- **Offline Messages**: When a user connects, all unread messages are sent to the client.
+- **Automatic Marking of Read Messages**: Once the user receives offline messages, they are automatically marked as read in the database.
+- **Improvement in Sprint 3**: The system has been optimized to handle both online and offline message sending more efficiently.
+
+---
+
+## 8. AWS Migration
+
+### Database Migration to AWS RDS
+The database for the messaging system was migrated from a local PostgreSQL instance to Amazon RDS for PostgreSQL. The migration process includes the following steps:
+
+1. **Setting Up RDS Instance**:
+   - Create an RDS PostgreSQL instance via the AWS Management Console.
+   - Configure the instance with appropriate settings, such as instance type, storage, and VPC configuration.
+
+2. **Database Configuration**:
+   - Adjust connection settings to connect to the AWS RDS instance, including the RDS endpoint, database name, username, and password.
+   - Update environment variables or configuration files to use the RDS database instance instead of the local database.
+
+3. **Data Migration**:
+   - Dump the local PostgreSQL database using `pg_dump` or a similar tool.
+   - Use `pg_restore` to import the data into the new RDS PostgreSQL instance.
+
+4. **Security Configuration**:
+   - Set up proper IAM roles and security groups to restrict access to the RDS instance.
+   - Ensure the application can connect to the RDS instance via secure channels (SSL/TLS) to protect data in transit.
+
+### WebSocket Deployment to AWS
+1. **Using AWS EC2**:
+   - Deploy the WebSocket server on an EC2 instance to handle real-time messaging.
+   - Choose an EC2 instance type appropriate for the expected traffic.
+   - Configure security groups to allow WebSocket connections on the necessary port.
+
+2. **Elastic Load Balancing (ELB)**:
+   - Set up an ELB in front of the WebSocket server to distribute traffic and handle failover in case of instance failure.
+   - Configure the WebSocket client to reconnect automatically if the connection drops or fails over to another instance.
+
+3. **Auto Scaling**:
+   - Set up Auto Scaling on the EC2 instances to handle varying loads of WebSocket connections dynamically.
+   - Adjust the scaling policies based on the number of active WebSocket connections or other metrics like CPU utilization.
+
+### S3 for File Storage (Optional)
+For storing media files or attachments sent in messages, AWS S3 can be used. Steps for integration:
+1. **Set Up S3 Bucket**:
+   - Create an S3 bucket with proper access permissions.
+   - Configure the system to upload attachments (e.g., images or documents) to S3.
+
+2. **File Handling**:
+   - Adjust the messaging API to include file upload functionality, storing files directly in S3 and referencing their URLs in message payloads.
+
+---
+
+## 9. Conclusion
+This API facilitates real-time and stored messaging functionalities through WebSockets and REST endpoints, enabling seamless communication between users. Sprint 3 improvements have enhanced the offline message management and WebSocket connection handling, making the system more resilient and efficient in real-world usage scenarios. The migration to AWS provides scalability, availability, and reliability for the system, ensuring high-performance messaging capabilities even under varying loads. Conversations are preserved even if users experience network disruptions, ensuring a smooth user experience across different states of connectivity.
 
 ---
 
@@ -1590,7 +1904,7 @@ This module contains unit tests for the **messaging service**, ensuring correct 
 
 ### **Testing Framework**
 - **Go Testing Package (`testing`)** – Standard testing framework in Go.
-- **Testify (`github.com/stretchr/testify`):** 
+- **Testify (`github.com/stretchr/testify`)**:
   - `mock` – Used to create a mock message repository.
   - `assert` – Used for validating expected and actual outcomes.
 
@@ -1598,39 +1912,157 @@ This module contains unit tests for the **messaging service**, ensuring correct 
 A **MockMessageRepository** is created to simulate database interactions without an actual database.
 
 ### **Tested Functions**
+
 1. **`SaveMessage`**  
-   - **Test:** Ensures a message is successfully saved.
-   - **Mocked Call:** `SaveMessage(models.Message)`
-   - **Expected Behavior:** No errors returned.
+   - **Test:** Ensures a message is successfully saved.  
+   - **Mocked Call:** `SaveMessage(models.Message)`  
+   - **Expected Behavior:** No errors returned.  
 
-2. **`GetLatestMessages`**  
-   - **Test:** Retrieves the latest messages with a limit.
-   - **Mocked Call:** `GetLatestMessages(limit int)`
-   - **Expected Behavior:** Returns an expected list of messages.
+2. **`SaveMessageError`**  
+   - **Test:** Handles database error while saving a message.  
+   - **Mocked Call:** `SaveMessage(models.Message)`  
+   - **Expected Behavior:** Returns an expected error.  
 
-3. **`MarkMessageAsRead`**  
-   - **Test:** Marks a message as read by its ID.
-   - **Mocked Call:** `MarkMessageAsRead(messageID int)`
-   - **Expected Behavior:** No errors returned.
+3. **`GetLatestMessages`**  
+   - **Test:** Retrieves the latest messages with a limit.  
+   - **Mocked Call:** `GetLatestMessages(limit int)`  
+   - **Expected Behavior:** Returns an expected list of messages.  
 
-4. **`GetUnreadMessages`**  
-   - **Test:** Fetches unread messages for a user.
-   - **Mocked Call:** `GetUnreadMessages(userID uint)`
-   - **Expected Behavior:** Returns unread messages.
+4. **`GetLatestMessagesError`**  
+   - **Test:** Handles error while fetching latest messages.  
+   - **Mocked Call:** `GetLatestMessages(limit int)`  
+   - **Expected Behavior:** Returns an expected error.  
 
-5. **`GetConversation`**  
-   - **Test:** Retrieves conversation history for a user.
-   - **Mocked Call:** `GetConversation(userID uint)`
-   - **Expected Behavior:** Returns a list of exchanged messages.
+5. **`MarkMessageAsRead`**  
+   - **Test:** Marks a message as read by its ID.  
+   - **Mocked Call:** `MarkMessageAsRead(messageID string)`  
+   - **Expected Behavior:** No errors returned.  
+
+6. **`MarkMessageAsReadError`**  
+   - **Test:** Handles error while marking a message as read.  
+   - **Mocked Call:** `MarkMessageAsRead(messageID string)`  
+   - **Expected Behavior:** Returns an expected error.  
+
+7. **`GetUnreadMessages`**  
+   - **Test:** Fetches unread messages for a user.  
+   - **Mocked Call:** `GetUnreadMessages(userID uint)`  
+   - **Expected Behavior:** Returns unread messages.  
+
+8. **`GetUnreadMessagesError`**  
+   - **Test:** Handles error while retrieving unread messages.  
+   - **Mocked Call:** `GetUnreadMessages(userID uint)`  
+   - **Expected Behavior:** Returns an expected error.  
+
+9. **`GetConversation`**  
+   - **Test:** Retrieves conversation history for a user.  
+   - **Mocked Call:** `GetConversation(user1ID, user2ID uint)`  
+   - **Expected Behavior:** Returns a list of exchanged messages.  
+
+10. **`GetConversationError`**  
+    - **Test:** Handles error while fetching conversation history.  
+    - **Mocked Call:** `GetConversation(user1ID, user2ID uint)`  
+    - **Expected Behavior:** Returns an expected error.  
+
+11. **`GetAllUsers`**  
+    - **Test:** Retrieves a list of all users.  
+    - **Mocked Call:** `GetAllUsers()`  
+    - **Expected Behavior:** Returns a list of users.  
+
+12. **`GetAllUsersError`**  
+    - **Test:** Handles error while fetching user list.  
+    - **Mocked Call:** `GetAllUsers()`  
+    - **Expected Behavior:** Returns an expected error.  
+
+13. **`NewUserRepository`**  
+    - **Test:** Ensures a new UserRepository is instantiated correctly.  
+    - **Mocked Call:** `NewUserRepository(*sql.DB)`  
+    - **Expected Behavior:** Returns a valid repository instance.  
+
+14. **`NewMessageRepository`**  
+    - **Test:** Ensures a new MessageRepository is instantiated correctly.  
+    - **Mocked Call:** `NewMessageRepository(*sql.DB)`  
+    - **Expected Behavior:** Returns a valid repository instance.  
 
 ### **Running Tests**
 To execute the test suite, use:
 ```bash
-go test ./...
+go test -v
 ```
 
-### *Work in Progress*
-There are a few functions that encountered issues during testing due to library or mocking constraints (I'm still not sure). I am actively working on resolving these challenges, and they are scheduled to be completed in the next sprint.
+---
+# Frontend Messaging System 
+---
+
+## Overview
+The Frontend Messaging System allows users to send and receive messages in real-time using WebSockets. The system supports user selection, message history fetching, live message updates, and a typing indicator.
+
+## Features
+| Feature                       | Function Name                                                       | Description                                           |
+|-------------------------------|---------------------------------------------------------------------|-------------------------------------------------------|
+| **User Selection**            | `useFetchUsers(userId)`                                             | Fetches the list of users for selection.              |
+| **Real-time Messaging**       | `useWebSocket(userId, handleMessageReceived)`                       | Manages WebSocket connection for live message updates.|
+| **Message History**           | `useFetchMessages(userId, selectedUser, setMessages)`               | Fetches previously exchanged messages.                |
+| **Typing Indicator**          | `useTypingIndicator(setInput)`                                      | Detects and notifies when a user is typing.           |
+| **Send Messages**             | `useSendMessage(userId, selectedUser, users, ws, input, setInput)`  | Sends messages via WebSocket.                         |
+| **Receive Messages**          | `handleMessageReceived(message)`                                    | Updates message state when a new message arrives.     |
+| **User Authentication**       | `getCurrentUserId()`                                                | Retrieves the logged-in user’s ID.                    |
+
+## Dependencies
+- React
+- Custom hooks:
+  - `useWebSocket`: Manages WebSocket connection.
+  - `useFetchMessages`: Fetches previous messages.
+  - `useTypingIndicator`: Detects typing activity.
+  - `useFetchUsers`: Fetches available users.
+  - `useSendMessage`: Handles sending messages.
+- Utility function:
+  - `getCurrentUserId`: Retrieves the logged-in user’s ID.
+- Custom Component:
+  - `MessageDisplay`: Displays chat messages.
+
+## Component Breakdown
+### **Chat Component**
+#### **State Variables:**
+- `messages`: Stores chat messages.
+- `input`: Tracks user input.
+- `selectedUser`: Stores the currently selected chat partner.
+
+#### **Hooks Used:**
+1. `getCurrentUserId()`: Retrieves the current user's ID.
+2. `useFetchUsers(userId)`: Fetches the list of users.
+3. `useWebSocket(userId, handleMessageReceived)`: Establishes a WebSocket connection.
+4. `useFetchMessages(userId, selectedUser, setMessages)`: Loads past messages.
+5. `useTypingIndicator(setInput)`: Detects when the user is typing.
+6. `useSendMessage(userId, selectedUser, users, ws, input, setInput)`: Sends messages over WebSockets.
+
+#### **Event Handlers:**
+- `handleMessageReceived(message)`: Updates message state when a new message arrives.
+- `handleTyping(event)`: Updates input and triggers typing indication.
+
+## Required Function Implementations
+To complete the system, provide implementations for:
+1. `useWebSocket(userId, handleMessageReceived)`: Manages WebSocket connection and listens for messages.
+2. `useFetchMessages(userId, selectedUser, setMessages)`: Fetches messages from the database.
+3. `useTypingIndicator(setInput)`: Detects when the user is typing and notifies the chat partner.
+4. `useFetchUsers(userId)`: Retrieves the list of available users.
+5. `useSendMessage(userId, selectedUser, users, ws, input, setInput)`: Handles sending messages via WebSocket.
+
+## UI Structure
+### **User List (Sidebar)**
+- Displays all available users.
+- Highlights the selected user.
+
+### **Chat Window**
+- Shows chat history.
+- Allows users to send messages.
+- Displays typing indicator when the chat partner is typing.
+
+## Future Enhancements
+- **Read Receipts:** Indicate when a message has been read.
+- **Message Timestamps:** Show when messages were sent.
+- **Group Chats:** Allow conversations with multiple users.
+
+
 
 ---
 # Frontend Unit Testing
@@ -1742,6 +2174,49 @@ The tests cover critical areas of the app, including UI rendering, state managem
 
 ---
 
+### 17. **User Selection**
+- **Test:** Should fetch the list of users for selection.  
+- **Expected Behavior:** Calls `useFetchUsers(userId)` and returns a list of users.  
+
+---  
+
+### 18. **Real-time Messaging**  
+- **Test:** Should establish a WebSocket connection and receive live updates.  
+- **Expected Behavior:** Calls `useWebSocket(userId, handleMessageReceived)` and updates messages in real time.  
+
+---  
+
+### 19. **Message History**  
+- **Test:** Should fetch previously exchanged messages when a user is selected.  
+- **Expected Behavior:** Calls `useFetchMessages(userId, selectedUser, setMessages)` and retrieves message history.  
+
+---  
+
+### 20. **Typing Indicator**  
+- **Test:** Should detect and notify when a user is typing.  
+- **Expected Behavior:** Calls `useTypingIndicator(setInput)` and displays a typing indicator when a user types.  
+
+---  
+
+### 21. **Send Messages**  
+- **Test:** Should send messages via WebSocket.  
+- **Expected Behavior:** Calls `useSendMessage(userId, selectedUser, users, ws, input, setInput)` and updates the chat.  
+
+---  
+
+### 22. **Receive Messages**  
+- **Test:** Should update the message state when a new message arrives.  
+- **Expected Behavior:** Calls `handleMessageReceived(message)` and updates the UI.  
+
+---  
+
+### 23. **User Authentication**  
+- **Test:** Should retrieve the logged-in user’s ID.  
+- **Expected Behavior:** Calls `getCurrentUserId()` and returns a valid user ID.  
+
+
+---
+
 ### **End-to-End Testing (Cypress)**  
 Cypress was used for **end-to-end testing**, with a successful test for the **login functionality**, as demonstrated in the recorded video.  
 
@@ -1765,7 +2240,6 @@ npx cypress open
 ```
 ### **Video** 
 
-[https://youtu.be/zvNfPwMtuNg](https://youtu.be/zvNfPwMtuNg)
+[https://youtu.be/IYlVsiClgOo](https://youtu.be/IYlVsiClgOo)
 
 ---
-
