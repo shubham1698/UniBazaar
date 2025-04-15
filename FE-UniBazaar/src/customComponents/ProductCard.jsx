@@ -146,7 +146,8 @@ const ProductCard = ({
   return (
     <div
       ref={cardRef}
-      className="relative flex flex-col w-full max-w-sm border border-gray-300 rounded-xl shadow-lg overflow-hidden bg-gray-900 transition-transform transform hover:scale-105 hover:shadow-2xl"
+      className={`relative flex flex-col w-full max-w-sm ${location.pathname === "/" ? "h-[22rem]" : "h-auto"
+        } border border-gray-300 rounded-xl shadow-lg overflow-hidden bg-gray-900 transition-transform transform hover:scale-105 hover:shadow-2xl`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -246,7 +247,9 @@ const ProductCard = ({
         </div>
       ) : (
         <>
-          <div className="relative h-64 w-full overflow-hidden">
+          <div
+            className={`relative w-full overflow-hidden ${location.pathname === "/" ? "h-full" : "h-64"}`}
+          >
             <img
               className="w-full h-full object-cover transition-all duration-500"
               src={editableProduct.productImage}
@@ -282,7 +285,7 @@ const ProductCard = ({
               <div className="flex items-center justify-between mt-4">
                 <span className="text-2xl font-bold text-[#F58B00]">${editableProduct.productPrice}</span>
 
-                {location.pathname === "/products" && (
+                {(location.pathname === "/" || location.pathname === "/products") && (
                   <Button
                     className="bg-[#F58B00] hover:bg-[#FFC67D] text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all hover:shadow-lg hover:text-black cursor-pointer"
                     onClick={onClick}
